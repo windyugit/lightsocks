@@ -4,6 +4,8 @@ import (
 	"io"
 	"log"
 	"net"
+
+	"github.com/gwuhaolin/tcp-over-http/http_client"
 )
 
 const (
@@ -12,7 +14,7 @@ const (
 
 // 加密传输的 TCP Socket
 type SecureTCPConn struct {
-	*net.TCPConn
+	io.ReadWriteCloser
 	Cipher *cipher
 }
 
@@ -33,7 +35,7 @@ func (secureSocket *SecureTCPConn) EncodeWrite(bs []byte) (int, error) {
 }
 
 // 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
-func (secureSocket *SecureTCPConn) EncodeCopy(dst *net.TCPConn) error {
+func (secureSocket *SecureTCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 	buf := make([]byte, bufSize)
 	for {
 		readCount, errRead := secureSocket.Read(buf)
@@ -46,7 +48,7 @@ func (secureSocket *SecureTCPConn) EncodeCopy(dst *net.TCPConn) error {
 		}
 		if readCount > 0 {
 			writeCount, errWrite := (&SecureTCPConn{
-				TCPConn: dst,
+				ReadWriteCloser: dst,
 				Cipher:  secureSocket.Cipher,
 			}).EncodeWrite(buf[0:readCount])
 			if errWrite != nil {
@@ -60,7 +62,7 @@ func (secureSocket *SecureTCPConn) EncodeCopy(dst *net.TCPConn) error {
 }
 
 // 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
-func (secureSocket *SecureTCPConn) DecodeCopy(dst *net.TCPConn) error {
+func (secureSocket *SecureTCPConn) DecodeCopy(dst io.Writer) error {
 	buf := make([]byte, bufSize)
 	for {
 		readCount, errRead := secureSocket.DecodeRead(buf)
@@ -85,12 +87,12 @@ func (secureSocket *SecureTCPConn) DecodeCopy(dst *net.TCPConn) error {
 
 // see net.DialTCP
 func DialTCPSecure(raddr *net.TCPAddr, cipher *cipher) (*SecureTCPConn, error) {
-	remoteConn, err := net.DialTCP("tcp", nil, raddr)
+	ws, err := http_client.DialTCPOverHTTP(raddr.String(), "ws://127.0.0.1:3000")
 	if err != nil {
 		return nil, err
 	}
 	return &SecureTCPConn{
-		TCPConn: remoteConn,
+		ReadWriteCloser: ws,
 		Cipher:  cipher,
 	}, nil
 }
@@ -117,7 +119,7 @@ func ListenSecureTCP(laddr *net.TCPAddr, cipher *cipher, handleConn func(localCo
 		// localConn被关闭时直接清除所有数据 不管没有发送的数据
 		localConn.SetLinger(0)
 		go handleConn(&SecureTCPConn{
-			TCPConn: localConn,
+			ReadWriteCloser: localConn,
 			Cipher:  cipher,
 		})
 	}

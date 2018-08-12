@@ -155,6 +155,6 @@ func (lsServer *LsServer) handleConn(localConn *SecureTCPConn) {
 	// 从 dstServer 读取数据发送到 localUser，这里因为处在翻墙阶段出现网络错误的概率更大
 	(&SecureTCPConn{
 		Cipher:  localConn.Cipher,
-		TCPConn: dstServer,
-	}).EncodeCopy(localConn.TCPConn)
+		ReadWriteCloser: dstServer,
+	}).EncodeCopy(localConn)
 }
