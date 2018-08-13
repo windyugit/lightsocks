@@ -64,22 +64,10 @@ func runEchoServer() {
 
 func runLightsocksProxyServer() {
 	password := lightsocks.RandPassword()
-	serverS, err := lightsocks.NewLsLocal(password, LightSocksProxyLocalAddr, LightSocksProxyServerAddr)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	localS, err := lightsocks.NewLsServer(password, LightSocksProxyServerAddr)
-	if err != nil {
-		log.Fatalln(err)
-	}
 	go func() {
-		log.Fatalln(serverS.Listen(func(listenAddr net.Addr) {
-			log.Println(listenAddr)
-		}))
+		log.Fatalln(lightsocks.ListenLocal(password, LightSocksProxyLocalAddr, "ws://127.0.0.1:8449"))
 	}()
-	log.Fatalln(localS.Listen(func(listenAddr net.Addr) {
-		log.Println(listenAddr)
-	}))
+	log.Fatalln(lightsocks.ListenServer(password, LightSocksProxyServerAddr))
 }
 
 // 发生一次连接测试经过代理后的数据传输的正确性

@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/gwuhaolin/tcp-over-http/http_client"
+	"golang.org/x/net/websocket"
 )
 
 const (
@@ -49,7 +49,7 @@ func (secureSocket *SecureTCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 		if readCount > 0 {
 			writeCount, errWrite := (&SecureTCPConn{
 				ReadWriteCloser: dst,
-				Cipher:  secureSocket.Cipher,
+				Cipher:          secureSocket.Cipher,
 			}).EncodeWrite(buf[0:readCount])
 			if errWrite != nil {
 				return errWrite
@@ -86,29 +86,32 @@ func (secureSocket *SecureTCPConn) DecodeCopy(dst io.Writer) error {
 }
 
 // see net.DialTCP
-func DialTCPSecure(raddr *net.TCPAddr, cipher *cipher) (*SecureTCPConn, error) {
-	ws, err := http_client.DialTCPOverHTTP(raddr.String(), "ws://127.0.0.1:3000")
+func DialTCPSecure(httpProxyAddr string, cipher *cipher) (*SecureTCPConn, error) {
+	ws, err := websocket.Dial(httpProxyAddr, "ws", httpProxyAddr)
+	if err != nil {
+		return nil, err
+	}
 	if err != nil {
 		return nil, err
 	}
 	return &SecureTCPConn{
 		ReadWriteCloser: ws,
-		Cipher:  cipher,
+		Cipher:          cipher,
 	}, nil
 }
 
 // see net.ListenTCP
-func ListenSecureTCP(laddr *net.TCPAddr, cipher *cipher, handleConn func(localConn *SecureTCPConn), didListen func(listenAddr net.Addr)) error {
-	listener, err := net.ListenTCP("tcp", laddr)
+func ListenSecureTCP(laddr string, cipher *cipher, handleConn func(localConn *SecureTCPConn)) error {
+	structListenAddr, err := net.ResolveTCPAddr("tcp", laddr)
+	if err != nil {
+		return err
+	}
+	listener, err := net.ListenTCP("tcp", structListenAddr)
 	if err != nil {
 		return err
 	}
 
 	defer listener.Close()
-
-	if didListen != nil {
-		didListen(listener.Addr())
-	}
 
 	for {
 		localConn, err := listener.AcceptTCP()
@@ -120,7 +123,7 @@ func ListenSecureTCP(laddr *net.TCPAddr, cipher *cipher, handleConn func(localCo
 		localConn.SetLinger(0)
 		go handleConn(&SecureTCPConn{
 			ReadWriteCloser: localConn,
-			Cipher:  cipher,
+			Cipher:          cipher,
 		})
 	}
 }

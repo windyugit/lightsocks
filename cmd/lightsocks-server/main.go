@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/gwuhaolin/lightsocks"
 	"github.com/gwuhaolin/lightsocks/cmd"
 	"github.com/phayes/freeport"
-	"log"
-	"net"
 )
 
 var version = "master"
@@ -30,17 +30,5 @@ func main() {
 	config.SaveConfig()
 
 	// 启动 server 端并监听
-	lsServer, err := lightsocks.NewLsServer(config.Password, config.ListenAddr)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Fatalln(lsServer.Listen(func(listenAddr net.Addr) {
-		log.Println("使用配置：", fmt.Sprintf(`
-本地监听地址 listen：
-%s
-密码 password：
-%s
-	`, listenAddr, config.Password))
-		log.Printf("lightsocks-server:%s 启动成功 监听在 %s\n", version, listenAddr.String())
-	}))
+	log.Fatalln(lightsocks.ListenServer(config.Password, config.ListenAddr))
 }
