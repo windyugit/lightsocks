@@ -49,7 +49,7 @@ func (secureSocket *SecureTCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 		if readCount > 0 {
 			writeCount, errWrite := (&SecureTCPConn{
 				ReadWriteCloser: dst,
-				Cipher:          secureSocket.Cipher,
+				Cipher:  secureSocket.Cipher,
 			}).EncodeWrite(buf[0:readCount])
 			if errWrite != nil {
 				return errWrite

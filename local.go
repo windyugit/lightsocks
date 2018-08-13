@@ -52,9 +52,6 @@ func (local *LsLocal) handleConn(userConn *SecureTCPConn) {
 	}
 	defer proxyServer.Close()
 
-	// Conn被关闭时直接清除所有数据 不管没有发送的数据
-	//proxyServer.SetLinger(0)
-
 	// 进行转发
 	// 从 proxyServer 读取数据发送到 localUser
 	go func() {
